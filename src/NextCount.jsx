@@ -4,11 +4,16 @@ import * as React from 'react';
 function debounce(fn, wait = 300) {
     let timer;
     return (...args) => {
-        console.log('timer', timer)
-        clearTimeout(timer)
+        // clearTimeout(timer)
+        console.log('timer:', timer)
+        if (timer) {
+            return
+        }
         timer = setTimeout(function() {
+            console.log('date', new Date())
             fn.apply(this, args)
-        }, wait)
+            timer = null;
+        }, 3000)
     }
 }
 
@@ -16,7 +21,6 @@ function Posts ({id}) {
     const [post, setPost] = React.useState(null)
     const debounceRef = React.useRef(
         debounce((id) => {
-            console.log(';=====', id)
             fetch(`https://dummyjson.com/posts/${id}`)
                 .then(res => res.json())
                 .then(data => setPost(data.body))
@@ -44,8 +48,7 @@ function Posts ({id}) {
     // const _debounce = React.useCallback(debounce(() => saveInput(), 300), [])
 
     React.useEffect(() => {
-        const _ddd = debounceRef.current
-        _ddd(id)
+        debounceRef.current(id)
 
         // debounceRef.current(fetch(`https://dummyjson.com/posts/${id}`)
         // .then(res => res.json())
