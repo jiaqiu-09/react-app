@@ -30,47 +30,41 @@ export default function ComputedMd5() {
         return `${minutes}:${seconds.toString().padStart(2, "0")}.${ms}`;
     };
 
+    const createChunks = (file) => {
+        const blobSlice = File.prototype.slice;
+        const chunkSize = 2 * 1024 * 1024;
+        let start = 0;
+        const chunks = [];
+        while (start < file.size) {
+            chunks.push(blobSlice.call(file, start, start + chunkSize));
+            start += chunkSize;
+        }
+        return chunks;
+    };
+
     const calculateFile = useCallback(async (file) => {
         if (!file) {
             return;
         }
         console.log("start: ", new Date());
         setIsLoading(true);
-        let blobSlice = File.prototype.slice;
-        let chunkSize = 2 * 1024 * 1024;
-        let chunks = Math.ceil(file.size / chunkSize);
-        let currentChunk = 0;
-        let spark = new SparkMD5.ArrayBuffer();
-        let fileReader = new FileReader();
+        const chunks = await createChunks(file);
+        console.log("chunks: ", chunks);
 
-        fileReader.onload = function (e) {
-            spark.append(e.target.result);
-            currentChunk++;
-
-            if (currentChunk < chunks) {
-                loadNext();
-            } else {
-                const v = spark.end();
-                setMd5Value(v);
-                setIsLoading(false);
-                console.log("end: ", new Date());
-            }
-        };
-
-        fileReader.onerror = function () {
-            setIsLoading(false);
-            console.warn("oops, something went wrong.");
-        };
-
-        function loadNext() {
-            let start = currentChunk * chunkSize;
-            let end =
-                start + chunkSize >= file.size ? file.size : start + chunkSize;
-
-            fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
+        if (window.Worker) {
+            const hash = await new Promise((resolve) => {
+                const hashWorker = new Worker("/hash.js");
+                hashWorker.postMessage({ chunks });
+                hashWorker.onmessage = (e) => {
+                    console.log("hash: ", e);
+                    resolve(e.data.hash);
+                    console.log("end: ", new Date());
+                };
+            });
+            setMd5Value(hash);
         }
 
-        loadNext();
+        setIsLoading(false);
     }, []);
 
     const handleChange = (e) => {

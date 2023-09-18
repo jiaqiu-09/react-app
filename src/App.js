@@ -12,7 +12,11 @@ import NextCount from "./NextCount";
 import ComputedMd5 from "./ComputeMd5";
 
 function App() {
-  return <ComputedMd5 />;
+    return (
+        <>
+            <ComputedMd5 />
+        </>
+    );
 }
 
 // function App() {
